@@ -1,0 +1,5 @@
+pandas
+feather-format
+docopt
+flask==0.12.2
+-e git+https://github.com/fspot/werkzeug@master#egg=werkzeug
