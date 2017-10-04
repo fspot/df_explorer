@@ -50,15 +50,30 @@ def create_app(storage_dir):
 
     @app.route('/')
     def home():
+        def pretty_size(nb_bytes):
+            if nb_bytes < 150:
+                return f"{nb_bytes} bytes"
+            elif nb_bytes < 1024 * 200:
+                nb_kB = nb_bytes / 1024.
+                return f"{nb_kB:.2f} kB"
+            elif nb_bytes < (1024 ** 2) * 200:
+                nb_MB = nb_bytes / (1024. ** 2)
+                return f"{nb_MB:.2f} MB"
+            else:
+                nb_GB = nb_bytes / (1024. ** 3)
+                return f"{nb_GB:.2f} GB"
+
         files = [
             {
                 "name": file.name[:-5],
                 "mtime": datetime.datetime.fromtimestamp(
                     file.lstat().st_mtime
-                ).strftime("%Y-%m-%d %H:%M")
+                ).strftime("%Y-%m-%d %H:%M"),
+                "size": pretty_size(file.lstat().st_size),
             }
             for file in storage_dir.glob('*.dump')
         ]
+        files = sorted(files, key=lambda e: e['mtime'], reverse=True)
         return render_template('index.html', files=files)
 
     return app

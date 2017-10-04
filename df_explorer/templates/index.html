@@ -15,7 +15,11 @@
     <h1>Available DataFrames</h1>
     <ul>
     {% for file in files %}
-        <li><a href="df/{{ file.name }}">/{{ file.name }}</a> [{{ file.mtime }}]</li>
+        <li>
+            [{{ file.mtime }}]
+            <a href="df/{{ file.name }}">{{ file.name }}</a>
+            ({{ file.size }})
+        </li>
     {% endfor %}
     </ul>
 </div>
