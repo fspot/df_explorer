@@ -13,6 +13,7 @@ Optional arguments:
 
 import os
 import datetime
+import gc
 from contextlib import suppress
 from pathlib import Path
 
@@ -47,6 +48,27 @@ def create_app(storage_dir):
             return jsonify({'success': False, 'error': str(e)})
         else:
             return jsonify({'success': True, 'message': 'File uploaded'})
+
+    @app.route('/clear-sessions')
+    def clear_sessions():
+        flask_app = app
+        tracebacks = flask_app.debugged_application.tracebacks
+        frames = flask_app.debugged_application.frames
+
+        for frame in frames.values():
+            for var in frame.locals.values():
+                if isinstance(var, pd.DataFrame):
+                    df = var
+                    df.drop(df.columns, axis=1, inplace=True)
+                    df.drop(df.index, inplace=True)
+            frame.console._ipy.locals.clear()
+            frame.console._ipy.globals.clear()
+
+        frames.clear()
+        tracebacks.clear()
+        gc.collect()
+
+        return 'cleared'
 
     @app.route('/')
     def home():
