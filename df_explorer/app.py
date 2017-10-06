@@ -24,13 +24,27 @@ from werkzeug.debug.tbtools import Traceback
 from werkzeug.debug import DebuggedApplication
 from docopt import docopt
 
-import debugger
-import werk
+from . import debugger
+from . import werk
 
 
 werk.monkey_patch_debugged_application(DebuggedApplication)
 werk.monkey_patch_flask_run(Flask)
 werk.monkey_patch_traceback(Traceback)
+
+
+def pretty_size(nb_bytes):
+    if nb_bytes < 150:
+        return f"{nb_bytes} bytes"
+    elif nb_bytes < 1024 * 200:
+        nb_kB = nb_bytes / 1024.
+        return f"{nb_kB:.2f} kB"
+    elif nb_bytes < (1024 ** 2) * 200:
+        nb_MB = nb_bytes / (1024. ** 2)
+        return f"{nb_MB:.2f} MB"
+    else:
+        nb_GB = nb_bytes / (1024. ** 3)
+        return f"{nb_GB:.2f} GB"
 
 
 def get_current_sessions(app):
@@ -94,19 +108,6 @@ def create_app(storage_dir):
 
     @app.route('/')
     def home():
-        def pretty_size(nb_bytes):
-            if nb_bytes < 150:
-                return f"{nb_bytes} bytes"
-            elif nb_bytes < 1024 * 200:
-                nb_kB = nb_bytes / 1024.
-                return f"{nb_kB:.2f} kB"
-            elif nb_bytes < (1024 ** 2) * 200:
-                nb_MB = nb_bytes / (1024. ** 2)
-                return f"{nb_MB:.2f} MB"
-            else:
-                nb_GB = nb_bytes / (1024. ** 3)
-                return f"{nb_GB:.2f} GB"
-
         files = [
             {
                 "name": file.name[:-5],
