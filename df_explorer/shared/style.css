@@ -168,8 +168,3 @@ div > pre.line.current {display: none;}
   content: 'Dataframe explorer';
   padding: 10px 0px;
 }
-
-/*div.debugger div.explanation span p,
-div.debugger div.explanation span ul {
-  display: none;
-}*/
