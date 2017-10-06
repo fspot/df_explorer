@@ -17,11 +17,33 @@ import gc
 from contextlib import suppress
 from pathlib import Path
 
+import psutil
 import pandas as pd
 from flask import Flask, jsonify, request, render_template
+from werkzeug.debug.tbtools import Traceback
+from werkzeug.debug import DebuggedApplication
 from docopt import docopt
 
 import debugger
+import werk
+
+
+werk.monkey_patch_debugged_application(DebuggedApplication)
+werk.monkey_patch_flask_run(Flask)
+werk.monkey_patch_traceback(Traceback)
+
+
+def get_current_sessions(app):
+    frames = app.debugged_application.frames
+    sessions = []
+    for frame in frames.values():
+        if '_df_id' not in frame.locals:
+            continue
+        sessions.append({
+            "df_id": frame.locals['_df_id'],
+            "frame": frame,
+        })
+    return sessions
 
 
 def create_app(storage_dir):
@@ -32,7 +54,7 @@ def create_app(storage_dir):
         df_file = storage_dir / (str(df_id) + '.dump')
         if df_file.exists():
             df = pd.read_feather(str(df_file))
-            return debugger.launch_debugger(df)
+            return debugger.launch_debugger(df, df_id)
         else:
             print(f"[err] No file {df_file}")
             return jsonify({"success": False, "error": f"no DF with id {df_id}"})
@@ -96,7 +118,15 @@ def create_app(storage_dir):
             for file in storage_dir.glob('*.dump')
         ]
         files = sorted(files, key=lambda e: e['mtime'], reverse=True)
-        return render_template('index.html', files=files)
+        sessions = get_current_sessions(app)
+        process = psutil.Process(os.getpid())
+        mem_used = pretty_size(process.memory_info().rss)
+        return render_template(
+            'index.html',
+            files=files,
+            sessions=sessions,
+            mem_used=mem_used,
+        )
 
     return app
 

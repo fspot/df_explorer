@@ -22,6 +22,17 @@
         </li>
     {% endfor %}
     </ul>
+
+    <h2>Memory usage</h2>
+    <p>&nbsp;&gt; Mem used: {{ mem_used }}</p>
+    {% if sessions %}
+    <p>&nbsp;&gt; <a href="clear-sessions">clear sessions</a></p>
+    {% endif %}
+    <ul>
+    {% for session in sessions %}
+        <li>{{ session.df_id }}</li>
+    {% endfor %}
+    </ul>
 </div>
 </body>
 </html>
