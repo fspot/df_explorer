@@ -5,3 +5,6 @@ dist/
 build/
 
 /store/
+
+*.sublime-project
+*.sublime-workspace

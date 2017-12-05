@@ -56,7 +56,7 @@ def monkey_patch_traceback(Traceback):
         REPLACE = [
             (
                 "Traceback <em>(most recent call last)</em>",
-                'Interactive debugger <em>(you can access your dataframe through the "df" variable)</em>'
+                'Interactive debugger <em>(you have access to your local variables)</em>'
             ),
             (
                 "The debugger caught an exception in your WSGI application.",
@@ -73,3 +73,30 @@ def monkey_patch_traceback(Traceback):
     Traceback._original_render_full = Traceback.render_full
     Traceback.__init__ = my_init
     Traceback.render_full = my_render_full
+
+
+def monkey_patch_frame(Frame):
+    def my_init(self, exc_type, exc_value, tb):
+        if not hasattr(tb, 'filename'):
+            return self._original_init(exc_type, exc_value, tb)
+        self.lineno = tb.tb_lineno
+        self.function_name = tb.tb_frame.f_code.co_name
+        self.locals = tb.tb_frame.f_locals
+        self.globals = tb.tb_frame.f_globals
+        self.filename = tb.filename
+        self.sourcecode = tb.sourcecode
+        self.module = self.globals.get('__name__')
+        self.loader = self.globals.get('__loader__')
+        self.code = tb.tb_frame.f_code
+        self.hide = self.locals.get('__traceback_hide__', False)
+        self.info = None
+
+    def my_sourcelines(self):
+        if not hasattr(self, 'sourcecode'):
+            return self._original_sourcelines
+        return self.sourcecode.splitlines()
+
+    Frame._original_init = Frame.__init__
+    Frame.__init__ = my_init
+    Frame._original_sourcelines = Frame.sourcelines
+    Frame.sourcelines = property(my_sourcelines)

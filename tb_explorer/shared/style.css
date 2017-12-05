@@ -152,10 +152,10 @@ div.pin-prompt .inner {
 
 /* ~~~~~~~~~~~ */
 
-blockquote {display: none;}
+/*blockquote {display: none;}*/
 .footer {display: none;}
-.frame h4 {display: none;}
-div > pre.line.current {display: none;}
+/*.frame h4 {display: none;}*/
+/*div > pre.line.current {display: none;}*/
 
 .detail .errormsg {display: none;}
 .debugger h1 {
@@ -165,6 +165,6 @@ div > pre.line.current {display: none;}
 .debugger h1:after {
   visibility: visible;
   display: block;
-  content: 'Dataframe explorer';
+  content: 'Traceback explorer';
   padding: 10px 0px;
 }

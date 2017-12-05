@@ -1,4 +1,4 @@
-recursive-include df_explorer *.css
-recursive-include df_explorer *.js
-recursive-include df_explorer *.html
+recursive-include tb_explorer *.css
+recursive-include tb_explorer *.js
+recursive-include tb_explorer *.html
 

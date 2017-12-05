@@ -185,11 +185,7 @@ function openShell(consoleNode, target, frameID) {
   var command = $('<textarea rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">')
     .appendTo(form)
     .keypress(function(e) {
-      if (e.charCode == 100 && e.ctrlKey) {
-        alert("yay");
-        output.text('--- screen cleared ---');
-        return false;
-      } else if (e.key === "Enter") {
+      if (e.key === "Enter") {
         var do_submit = false;
         if (e.ctrlKey)
           do_submit = true;
@@ -216,6 +212,12 @@ function openShell(consoleNode, target, frameID) {
           autosize.update(command);
           return false;
         }
+      }
+    });
+    command[0].addEventListener('keydown', function(e) {
+      if (e.charCode == 100 && e.ctrlKey) {
+        output.text('--- screen cleared ---');
+        return false;
       } else if (e.charCode == 0 && (e.keyCode == 38 || e.keyCode == 40)) {
         if (e.keyCode == 38 && historyPos > 0)
           historyPos--;

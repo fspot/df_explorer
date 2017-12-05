@@ -1,4 +1,4 @@
-"""DataFrame explorer
+"""Traceback explorer
 
 Usage:
   app.py [--storage STORAGE] [--port PORT]
@@ -17,73 +17,89 @@ import gc
 from contextlib import suppress
 from pathlib import Path
 
+import joblib
 import psutil
 import pandas as pd
-from flask import Flask, jsonify, request, render_template
-from werkzeug.debug.tbtools import Traceback
+from flask import Flask, jsonify, request, render_template, redirect, url_for
+from werkzeug.debug.tbtools import Traceback, Frame
 from werkzeug.debug import DebuggedApplication
 from docopt import docopt
 
-from . import debugger
+from .utils import from_serializable_traceback, pretty_size
 from . import werk
 
 
 werk.monkey_patch_debugged_application(DebuggedApplication)
 werk.monkey_patch_flask_run(Flask)
 werk.monkey_patch_traceback(Traceback)
-
-
-def pretty_size(nb_bytes):
-    if nb_bytes < 150:
-        return f"{nb_bytes} bytes"
-    elif nb_bytes < 1024 * 200:
-        nb_kB = nb_bytes / 1024.
-        return f"{nb_kB:.2f} kB"
-    elif nb_bytes < (1024 ** 2) * 200:
-        nb_MB = nb_bytes / (1024. ** 2)
-        return f"{nb_MB:.2f} MB"
-    else:
-        nb_GB = nb_bytes / (1024. ** 3)
-        return f"{nb_GB:.2f} GB"
+werk.monkey_patch_frame(Frame)
 
 
 def get_current_sessions(app):
-    frames = app.debugged_application.frames
     sessions = []
-    for frame in frames.values():
-        if '_df_id' not in frame.locals:
-            continue
+    for tb_num, (tb, tb_id, tb_date) in app.tb_sessions.items():
         sessions.append({
-            "df_id": frame.locals['_df_id'],
-            "frame": frame,
+            "tb_num": tb_num,
+            "tb": tb,
+            "tb_id": tb_id,
+            "tb_date": tb_date.strftime("%Y-%m-%d %H:%M:%S"),
         })
     return sessions
 
 
 def create_app(storage_dir):
     app = Flask(__name__)
+    app.tb_sessions = {}
 
-    @app.route('/df/<df_id>', methods=['GET'])
-    def df_view(df_id):
-        df_file = storage_dir / (str(df_id) + '.dump')
-        if df_file.exists():
-            df = pd.read_feather(str(df_file))
-            return debugger.launch_debugger(df, df_id)
+    def render_traceback(tb):
+        return tb.render_full(
+            evalex=True,
+            evalex_trusted=True,
+            secret=app.debugged_application.secret
+        ).encode('utf-8', 'replace')
+
+    @app.route('/tb/<tb_id>', methods=['GET'])
+    def tb_new_session(tb_id):
+        flask_app = app
+        tb_file = storage_dir / (str(tb_id) + '.dump')
+        if tb_file.exists():
+            stb = joblib.load(tb_file)
+            exc_type, exc_value, tb = from_serializable_traceback(stb)
+            traceback = Traceback(exc_type, exc_value, tb)
+            for frame in traceback.frames:
+                flask_app.debugged_application.frames[frame.id] = frame
+            flask_app.debugged_application.tracebacks[traceback.id] = traceback
+            now = datetime.datetime.now()
+            flask_app.tb_sessions[traceback.id] = (traceback, tb_id, now)
+            return redirect(url_for('session_view', session_id=traceback.id))
         else:
-            print(f"[err] No file {df_file}")
-            return jsonify({"success": False, "error": f"no DF with id {df_id}"})
+            print(f"[err] No file {tb_file}")
+            return jsonify({"success": False, "error": f"no TB with id {tb_id}"})
 
-    @app.route('/df/<df_id>', methods=['POST'])
-    def df_upload(df_id):
+    @app.route('/tb/<tb_id>', methods=['POST'])
+    def tb_upload(tb_id):
         try:
-            df_file = storage_dir / (str(df_id) + '.dump')
-            with open(df_file, 'wb') as f:
+            tb_file = storage_dir / (str(tb_id) + '.dump')
+            with open(tb_file, 'wb') as f:
                 while not request.stream.is_exhausted:
                     f.write(request.stream.read(1024 * 100))
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)})
         else:
             return jsonify({'success': True, 'message': 'File uploaded'})
+
+    @app.route('/last_session')
+    def last_session():
+        flask_app = app
+        all_tb = list(flask_app.debugged_application.tracebacks.values())
+        traceback = all_tb[-1]
+        return render_traceback(traceback)
+
+    @app.route('/session/<session_id>')
+    def session_view(session_id):
+        flask_app = app
+        traceback = flask_app.tb_sessions[int(session_id)][0]
+        return render_traceback(traceback)
 
     @app.route('/clear-sessions')
     def clear_sessions():
@@ -97,13 +113,18 @@ def create_app(storage_dir):
                     df = var
                     df.drop(df.columns, axis=1, inplace=True)
                     df.drop(df.index, inplace=True)
+            for var in frame.globals.values():
+                if isinstance(var, pd.DataFrame):
+                    df = var
+                    df.drop(df.columns, axis=1, inplace=True)
+                    df.drop(df.index, inplace=True)
             frame.console._ipy.locals.clear()
             frame.console._ipy.globals.clear()
 
         frames.clear()
         tracebacks.clear()
+        flask_app.tb_sessions.clear()
         gc.collect()
-
         return 'cleared'
 
     @app.route('/')
