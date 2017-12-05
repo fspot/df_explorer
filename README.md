@@ -1,21 +1,21 @@
-# df_explorer
+# tb_explorer
 
-Minimalist webapp to visualize your dataframes. You can :
-- upload your dataframes (feather dump format) to it
-- view the list of uploaded dataframes
-- explore them in a python shell
+Minimalist webapp to visualize your tracebacks. You can :
+- upload your tracebacks (using joblib.dump) to it
+- view the list of uploaded tracebacks
+- explore local variables in a python shell
 
 ## Installation
 
 ```
-$ pip install df-explorer
+$ pip install tb-explorer
 ```
 
 ## Usage
 
 ```
-$ dfexplorer -h
-DataFrame explorer
+$ tb-explorer -h
+Traceback explorer
 
 Usage:
   app.py [--storage STORAGE] [--port PORT]

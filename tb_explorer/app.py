@@ -14,13 +14,16 @@ Optional arguments:
 import os
 import datetime
 import gc
+import signal
 from contextlib import suppress
 from pathlib import Path
 
 import joblib
 import psutil
 import pandas as pd
-from flask import Flask, jsonify, request, render_template, redirect, url_for
+from flask import (
+    Flask, jsonify, request, render_template, redirect, url_for, Response
+)
 from werkzeug.debug.tbtools import Traceback, Frame
 from werkzeug.debug import DebuggedApplication
 from docopt import docopt
@@ -101,6 +104,13 @@ def create_app(storage_dir):
         traceback = flask_app.tb_sessions[int(session_id)][0]
         return render_traceback(traceback)
 
+    @app.route('/shutdown')
+    def shutdown():
+        def stream():
+            yield 'Shutting down.'
+            os.kill(os.getpid(), signal.SIGINT)
+        return Response(stream(), mimetype='text/plain')
+
     @app.route('/clear-sessions')
     def clear_sessions():
         flask_app = app
@@ -125,7 +135,7 @@ def create_app(storage_dir):
         tracebacks.clear()
         flask_app.tb_sessions.clear()
         gc.collect()
-        return 'cleared'
+        return Response('cleared', mimetype='text/plain')
 
     @app.route('/')
     def home():

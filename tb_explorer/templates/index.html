@@ -24,7 +24,13 @@
     </ul>
 
     <h2>Memory usage</h2>
-    <p>&nbsp;&gt; Mem used: {{ mem_used }}{% if sessions %} - <a href="clear-sessions">[clear sessions]</a>{% endif %}</p>
+    <p>
+        &nbsp;&gt; Mem used: {{ mem_used }}
+        {% if sessions %}
+        - <a href="clear-sessions">[clear sessions]</a>
+          <a href="shutdown">[shutdown]</a>
+        {% endif %}
+     </p>
 
     {% if sessions %}
     <h2>Active sessions</h2>
